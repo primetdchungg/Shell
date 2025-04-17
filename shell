@@ -1,0 +1,71 @@
+import os
+import sys
+import subprocess
+
+def my_shell():
+    while True:
+        # 1. Hiển thị dấu nhắc lệnh
+        prompt = f"{os.getcwd()}> "  # Hiển thị thư mục hiện tại
+        command_line = input(prompt)
+
+        # 2. Đọc lệnh từ người dùng
+        command_line = command_line.strip()  # Loại bỏ khoảng trắng thừa
+
+        if not command_line:
+            continue  # Nếu không có lệnh, tiếp tục vòng lặp
+
+        # 3. Phân tích lệnh
+        parts = command_line.split()
+        command = parts[0]
+        arguments = parts[1:]
+
+        # 4. Xử lý lệnh
+        if command == "exit":
+            break  # Thoát khỏi shell
+
+        elif command == "cd":
+            if not arguments:
+                os.chdir(os.path.expanduser("~"))  # Chuyển về thư mục home nếu không có đối số
+            else:
+                try:
+                    os.chdir(arguments[0])
+                except FileNotFoundError:
+                    print(f"Không tìm thấy thư mục: {arguments[0]}")
+                except NotADirectoryError:
+                    print(f"{arguments[0]} không phải là một thư mục.")
+
+        elif command == "pwd":
+            print(os.getcwd())
+
+        elif command == "ls":
+            try:
+                # Sử dụng subprocess để chạy lệnh ls
+                process = subprocess.Popen(['ls'] + arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+
+                if stdout:
+                    print(stdout.decode())
+                if stderr:
+                    print(stderr.decode())
+            except FileNotFoundError:
+                print("Lệnh 'ls' không tìm thấy.")
+
+        else:
+            # Xử lý các lệnh bên ngoài khác
+            try:
+                process = subprocess.Popen([command] + arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+
+                if stdout:
+                    print(stdout.decode())
+                if stderr:
+                    print(stderr.decode())
+            except FileNotFoundError:
+                print(f"Lệnh '{command}' không tìm thấy.")
+            except Exception as e:
+                print(f"Lỗi khi thực thi lệnh '{command}': {e}")
+
+if __name__ == "__main__":
+    print("Chào mừng đến với shell cơ bản của bạn!")
+    my_shell()
+    print("Tạm biệt!")
