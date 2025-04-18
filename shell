@@ -1,32 +1,42 @@
 import os
 import sys
 import subprocess
+import shutil  # Module để sao chép và di chuyển tệp
 
 def my_shell():
+    """
+    Hàm chính chứa vòng lặp của shell.
+    Nó liên tục hiển thị dấu nhắc lệnh, đọc lệnh từ người dùng và thực thi lệnh đó.
+    """
     while True:
-        # 1. Hiển thị dấu nhắc lệnh
-        prompt = f"{os.getcwd()}> "  # Hiển thị thư mục hiện tại
+        # 1. Hiển thị dấu nhắc lệnh, bao gồm thư mục làm việc hiện tại
+        prompt = f"{os.getcwd()}> "
         command_line = input(prompt)
+        # Loại bỏ khoảng trắng thừa ở đầu và cuối dòng lệnh
+        command_line = command_line.strip()
 
-        # 2. Đọc lệnh từ người dùng
-        command_line = command_line.strip()  # Loại bỏ khoảng trắng thừa
-
+        # Nếu không có lệnh nào được nhập, tiếp tục vòng lặp
         if not command_line:
-            continue  # Nếu không có lệnh, tiếp tục vòng lặp
+            continue
 
-        # 3. Phân tích lệnh
+        # 2. Phân tích lệnh: chia dòng lệnh thành lệnh và các đối số
         parts = command_line.split()
-        command = parts[0]
-        arguments = parts[1:]
+        command = parts[0]  # Lệnh là phần tử đầu tiên
+        arguments = parts[1:]  # Các đối số là các phần tử còn lại
 
-        # 4. Xử lý lệnh
+        # 3. Xử lý lệnh
+
+        # Lệnh 'exit' để thoát khỏi shell
         if command == "exit":
-            break  # Thoát khỏi shell
+            break
 
+        # Lệnh 'cd' để thay đổi thư mục làm việc
         elif command == "cd":
             if not arguments:
-                os.chdir(os.path.expanduser("~"))  # Chuyển về thư mục home nếu không có đối số
+                # Nếu không có đối số, chuyển về thư mục home của người dùng
+                os.chdir(os.path.expanduser("~"))
             else:
+                # Cố gắng thay đổi thư mục đến đường dẫn được cung cấp
                 try:
                     os.chdir(arguments[0])
                 except FileNotFoundError:
@@ -34,30 +44,118 @@ def my_shell():
                 except NotADirectoryError:
                     print(f"{arguments[0]} không phải là một thư mục.")
 
+        # Lệnh 'pwd' để in ra thư mục làm việc hiện tại
         elif command == "pwd":
             print(os.getcwd())
 
+        # Lệnh 'ls' để liệt kê các tệp và thư mục trong thư mục hiện tại
         elif command == "ls":
             try:
-                # Sử dụng subprocess để chạy lệnh ls
+                # Sử dụng subprocess để chạy lệnh 'ls' và lấy đầu ra
                 process = subprocess.Popen(['ls'] + arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 stdout, stderr = process.communicate()
 
+                # In đầu ra chuẩn (nếu có)
                 if stdout:
                     print(stdout.decode())
+                # In lỗi chuẩn (nếu có)
                 if stderr:
                     print(stderr.decode())
             except FileNotFoundError:
                 print("Lệnh 'ls' không tìm thấy.")
 
+        # Lệnh 'mkdir' để tạo thư mục
+        elif command == "mkdir":
+            if not arguments:
+                print("Cú pháp: mkdir <tên_thư_mục>")
+            else:
+                try:
+                    # Tạo thư mục, tham số exist_ok=True để không báo lỗi nếu thư mục đã tồn tại
+                    os.makedirs(arguments[0], exist_ok=True)
+                except Exception as e:
+                    print(f"Lỗi khi tạo thư mục: {e}")
+
+        # Lệnh 'rm' để xóa tệp hoặc thư mục
+        elif command == "rm":
+            if not arguments:
+                print("Cú pháp: rm <tên_tệp_hoặc_thư_mục>")
+            else:
+                target = arguments[0]
+                try:
+                    # Kiểm tra nếu là tệp và xóa
+                    if os.path.isfile(target):
+                        os.remove(target)
+                    # Kiểm tra nếu là thư mục và xóa đệ quy (cẩn thận khi sử dụng)
+                    elif os.path.isdir(target):
+                        shutil.rmtree(target)
+                    else:
+                        print(f"Không tìm thấy tệp hoặc thư mục: {target}")
+                except FileNotFoundError:
+                    print(f"Không tìm thấy tệp hoặc thư mục: {target}")
+                except OSError as e:
+                    print(f"Lỗi khi xóa: {e}")
+
+        # Lệnh 'cp' để sao chép tệp
+        elif command == "cp":
+            if len(arguments) != 2:
+                print("Cú pháp: cp <nguồn> <đích>")
+            else:
+                source = arguments[0]
+                destination = arguments[1]
+                try:
+                    # Sao chép tệp từ nguồn đến đích, giữ lại metadata
+                    shutil.copy2(source, destination)
+                except FileNotFoundError:
+                    print(f"Không tìm thấy tệp nguồn: {source}")
+                except IsADirectoryError:
+                    print(f"Đích đến '{destination}' là một thư mục.")
+                except Exception as e:
+                    print(f"Lỗi khi sao chép: {e}")
+
+        # Lệnh 'mv' để di chuyển hoặc đổi tên tệp hoặc thư mục
+        elif command == "mv":
+            if len(arguments) != 2:
+                print("Cú pháp: mv <nguồn> <đích>")
+            else:
+                source = arguments[0]
+                destination = arguments[1]
+                try:
+                    # Di chuyển tệp hoặc thư mục từ nguồn đến đích
+                    shutil.move(source, destination)
+                except FileNotFoundError:
+                    print(f"Không tìm thấy tệp hoặc thư mục nguồn: {source}")
+                except Exception as e:
+                    print(f"Lỗi khi di chuyển: {e}")
+
+        # Lệnh 'echo' để in ra các đối số
+        elif command == "echo":
+            print(" ".join(arguments))
+
+        # Lệnh 'cat' để hiển thị nội dung của tệp
+        elif command == "cat":
+            if not arguments:
+                print("Cú pháp: cat <tên_tệp>")
+            else:
+                try:
+                    # Mở tệp ở chế độ đọc và in nội dung
+                    with open(arguments[0], 'r') as f:
+                        print(f.read())
+                except FileNotFoundError:
+                    print(f"Không tìm thấy tệp: {arguments[0]}")
+                except Exception as e:
+                    print(f"Lỗi khi đọc tệp: {e}")
+
+        # Nếu lệnh không phải là lệnh tích hợp, hãy thử chạy nó như một lệnh bên ngoài
         else:
-            # Xử lý các lệnh bên ngoài khác
             try:
+                # Sử dụng subprocess để chạy lệnh bên ngoài và lấy đầu ra
                 process = subprocess.Popen([command] + arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 stdout, stderr = process.communicate()
 
+                # In đầu ra chuẩn (nếu có)
                 if stdout:
                     print(stdout.decode())
+                # In lỗi chuẩn (nếu có)
                 if stderr:
                     print(stderr.decode())
             except FileNotFoundError:
@@ -65,6 +163,7 @@ def my_shell():
             except Exception as e:
                 print(f"Lỗi khi thực thi lệnh '{command}': {e}")
 
+# Đoạn mã này chỉ được thực thi khi tệp script được chạy trực tiếp
 if __name__ == "__main__":
     print("Chào mừng đến với shell cơ bản của bạn!")
     my_shell()
